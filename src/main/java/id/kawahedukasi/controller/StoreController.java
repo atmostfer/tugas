@@ -1,12 +1,20 @@
 package id.kawahedukasi.controller;
 
+import com.opencsv.exceptions.CsvValidationException;
+import id.kawahedukasi.dto.FileFormDTO;
 import id.kawahedukasi.model.Store;
+import id.kawahedukasi.service.ExportService;
+import id.kawahedukasi.service.ImportService;
+import id.kawahedukasi.service.StoreService;
+import net.sf.jasperreports.engine.JRException;
+import org.jboss.resteasy.annotations.providers.multipart.MultipartForm;
 
+import javax.inject.Inject;
 import javax.transaction.Transactional;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.HashMap;
+import java.io.IOException;
 import java.util.Map;
 
 @Path("/store")
@@ -14,9 +22,37 @@ import java.util.Map;
 @Consumes(MediaType.APPLICATION_JSON)
 
 public class StoreController {
+
+    @Inject
+    StoreService storeService;
+
+    @Inject
+    ExportService exportService;
+
+    @Inject
+    ImportService importService;
+
     @GET
     public Response inputPathParameter() {
-        return Response.status(Response.Status.OK).entity(Store.findAll().list()).build();
+        return storeService.get();
+    }
+    @GET
+    @Path("/export/pdf")
+    @Produces("application/pdf")
+    public Response exportPdf() throws JRException {
+        return exportService.exportPdfStore();
+    }
+    @GET
+    @Path("/export/excel")
+    @Produces("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    public Response exportExcel() throws IOException {
+        return exportService.exportExcelStore();
+    }
+    @GET
+    @Path("/export/csv")
+    @Produces("text/csv")
+    public Response exportCsv() throws IOException {
+        return exportService.exportCsvStore();
     }
     @GET
     @Path("/{Id}")
@@ -31,54 +67,38 @@ public class StoreController {
     @POST
     @Transactional
     public Response post(Map<String, Object> request) {
-        Store store = new Store();
-        store.name = request.get("name").toString();
-        store.count = Integer.valueOf(request.get("count").toString());
-        store.price = Double.valueOf(request.get("price").toString());
-        store.type = request.get("type").toString();
-        store.description = request.get("description").toString();
-        store.createdAt = request.get("createdAt").toString();
-        store.updatedAt = request.get("updatedAt").toString();
+        return storeService.post(request);
+    }
 
-        //save to database
-        store.persist();
-
-        return Response.status(Response.Status.CREATED).entity(new HashMap<>()).build();
+    @POST
+    @Path("/import/csv")
+    @Consumes(MediaType.MULTIPART_FORM_DATA)
+    public Response importCSV(@MultipartForm FileFormDTO request) {
+        try {
+            return importService.importCSV(request);
+        } catch (IOException | CsvValidationException e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     @PUT
     @Path("/{id}")
     @Transactional
     public Response put(@PathParam("id") Long id, Map<String, Object> request) {
-        Store store = Store.findById(id);
-        if (store == null) {
-            return Response.status(Response.Status.BAD_REQUEST).build();
-        }
-        store.name = request.get("name").toString();
-        store.count = Integer.valueOf(request.get("count").toString());
-        store.price = Double.valueOf(request.get("price").toString());
-        store.type = request.get("type").toString();
-        store.description = request.get("description").toString();
-        store.createdAt = request.get("createdAt").toString();
-        store.updatedAt = request.get("updatedAt").toString();
+        return storeService.put(id, request);
+    }
 
-        //save to database
-        store.persist();
-
-        return Response.status(Response.Status.CREATED).entity(new HashMap<>()).build();
+    @POST
+    @Path("/import/excel")
+    @Consumes(MediaType.MULTIPART_FORM_DATA)
+    public Response importExcel(@MultipartForm FileFormDTO request) throws IOException {
+        return importService.importExcel(request);
     }
 
     @DELETE
     @Path("/{id}")
     @Transactional
     public Response delete(@PathParam("id") Long id, Map<String, Object> request) {
-        Store store = Store.findById(id);
-        if (store == null) {
-            return Response.status(Response.Status.BAD_REQUEST).build();
-        }
-        //save to database
-        store.delete();
-
-        return Response.status(Response.Status.OK).entity(new HashMap<>()).build();
+        return storeService.delete(id);
     }
 }

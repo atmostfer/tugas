@@ -1,8 +1,11 @@
 package id.kawahedukasi.model;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import javax.persistence.*;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name= "store")
@@ -28,9 +31,11 @@ public class Store extends PanacheEntityBase {
     @Column(name = "description")
     public String description;
 
+    @CreationTimestamp
     @Column(name = "created_at")
-    public String createdAt;
+    public LocalDateTime createdAt;
 
+    @UpdateTimestamp
     @Column(name = "updated_at")
-    public String updatedAt;
+    public LocalDateTime updatedAt;
 }
